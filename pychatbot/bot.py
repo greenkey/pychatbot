@@ -3,6 +3,7 @@ import json
 class Bot(object):
 	commands = []
 	command_prepend = "/"
+	endpoints = []
 	
 	def default_response(self, in_message):
 		pass
@@ -12,7 +13,8 @@ class Bot(object):
 			f = self.__getattribute__(in_message[1:])
 			return f(self)
 		return self.default_response(in_message)
-		
+
+
 	def http_serve(self):
 		from http.server import HTTPServer, BaseHTTPRequestHandler
 		import http
@@ -95,6 +97,14 @@ class Bot(object):
 		
 		self.telegram.start_polling()
 
+
+	def add_endpoint(self,endpoint):
+		self.endpoints.append(endpoint)
+
+
+	def start(self):
+		for ep in self.endpoints:
+			ep.start()
 
 
 # decorator    

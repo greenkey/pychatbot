@@ -3,6 +3,7 @@ from pychatbot.bot import Bot
 def test_create_bot_object():
     b = Bot()
     assert isinstance(b, Bot)
+
     
 def test_default_behaviour():
 	class MyBot(Bot):
@@ -30,3 +31,17 @@ def test_add_command():
 	b = MyBot()
 	assert b.process("/hello") == "hello!"
 	assert b.process("/bye") == "goodbye..."
+
+
+def test_add_endpoint(mocker):
+	class MyBot(Bot):
+		pass
+	
+	endpoint = mocker.Mock()
+	
+	bot = MyBot()
+	bot.add_endpoint(endpoint)
+	bot.start()
+	
+	assert endpoint.start.called
+	
