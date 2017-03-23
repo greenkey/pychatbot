@@ -97,6 +97,7 @@ class Bot(object):
         self.telegram.start_polling()
 
     def add_endpoint(self, endpoint):
+        endpoint.set_bot(self)
         self.endpoints.append(endpoint)
 
     def start(self):
