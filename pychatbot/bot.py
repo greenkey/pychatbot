@@ -100,9 +100,9 @@ class Bot(object):
         endpoint.set_bot(self)
         self.endpoints.append(endpoint)
 
-    def start(self):
+    def run(self):
         for ep in self.endpoints:
-            ep.start()
+            ep.run()
 
     def stop(self):
         for ep in self.endpoints:

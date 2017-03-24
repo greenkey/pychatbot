@@ -40,7 +40,7 @@ class HttpEndpoint(object):
         while self._http_on:
             self._httpd.handle_request()
 
-    def start(self):
+    def run(self):
         self._http_on = True
         self._http_thread = Thread(target=self.serve_loop)
         self._http_thread.daemon = True

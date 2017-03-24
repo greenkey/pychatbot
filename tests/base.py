@@ -42,9 +42,9 @@ def test_add_endpoint_start_stop(mocker):
 
     bot = MyBot()
     bot.add_endpoint(endpoint)
-    bot.start()
+    bot.run()
 
-    assert endpoint.start.called
+    assert endpoint.run.called
 
     bot.stop()
 
