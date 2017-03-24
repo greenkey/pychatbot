@@ -1,10 +1,15 @@
-from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
+from time import sleep
 
 try:
     from urllib.parse import parse_qs
+    from http.server import HTTPServer, BaseHTTPRequestHandler
 except ImportError:
     from urlparse import parse_qs
+    import SimpleHTTPServer
+    from SocketServer import TCPServer as HTTPServer
+    from SimpleHTTPServer import SimpleHTTPRequestHandler as BaseHTTPRequestHandler
+    HTTPServer.allow_reuse_address = True
 import json
 
 
@@ -42,7 +47,7 @@ class HttpEndpoint(object):
         self._http_thread.start()
 
         while not self._http_thread.is_alive():
-            pass
+            sleep(1)
 
     def stop(self):
         self._http_on = False
