@@ -1,7 +1,26 @@
 import telegram
 
 from pychatbot.bot import Bot, command
+from endpoints.telegram import TelegramEndpoint
 
+
+def test_telegram_interface_new(mocker):
+	mocker.patch('telegram.ext.Updater')
+
+	class MyBot(Bot):
+		def default_response(self, in_message):
+			return in_message.lower()
+
+	bot = MyBot()
+
+	ep = TelegramEndpoint(
+		token='123:ABC'
+	)
+	bot.add_endpoint(ep)
+	bot.run()
+
+	telegram.ext.Updater.assert_called_once_with('123:ABC')
+	assert telegram.ext.Updater().start_polling.called
 
 def test_telegram_interface(mocker):
 	
