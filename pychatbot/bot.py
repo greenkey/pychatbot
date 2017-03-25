@@ -15,42 +15,6 @@ class Bot(object):
             return f(self)
         return self.default_response(in_message)
 
-    def http_serve(self):
-        from http.server import HTTPServer, BaseHTTPRequestHandler
-        import http
-        from threading import Thread
-        try:
-            from urllib.parse import parse_qs
-        except ImportError:
-            from urlparse import parse_qs
-
-        PORT = 8000
-
-        class Handler(BaseHTTPRequestHandler):
-            def do_GET(s):
-                function, params = s.path.split("?")
-                function, params = function[1:], parse_qs(params)
-
-                s.send_response(200)
-                s.end_headers()
-                output = {
-                    "out_message": self.process("".join(params["in_message"]))
-                }
-                s.wfile.write(json.dumps(output).encode("UTF-8"))
-
-        def serve_loop():
-            while self.http_on:
-                self.httpd.handle_request()
-
-        self.httpd = HTTPServer(('', PORT), Handler)
-        self.http_on = True
-        self.http_thread = Thread(target=serve_loop)
-        self.http_thread.daemon = True
-        self.http_thread.start()
-
-        while not self.http_thread.is_alive():
-            pass
-
     def http_stop(self):
         self.http_on = False
 
