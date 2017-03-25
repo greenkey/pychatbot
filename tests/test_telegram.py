@@ -56,6 +56,33 @@ def create_telegram_update(message_text):
 	)
 	
 
+def test_telegram_default_response_new(mocker):
+	mocker.patch('telegram.ext.Updater')
+	mocker.patch('telegram.ext.MessageHandler')
+	mocker.patch('telegram.Message.reply_text')
+	
+	class MyBot(Bot):
+		
+		def default_response(self, in_message):
+			return in_message[::-1].upper()
+			
+	bot = MyBot()
+	ep = TelegramEndpoint(
+		token='123:ABC'
+	)
+	bot.add_endpoint(ep)
+	bot.run()
+	
+	handlers_added = [args for args, kwargs in telegram.ext.MessageHandler.call_args_list]
+	assert len(handlers_added) > 0
+	generic_handler = list(handler for filter_, handler in handlers_added)[-1]
+	
+	message = 'this is the message'
+	generic_handler(bot, create_telegram_update(message))
+	telegram.Message.reply_text.assert_called_with(bot.default_response(message))
+
+	bot.stop()
+
 def test_telegram_default_response(mocker):
 	mocker.patch('telegram.ext.Updater')
 	mocker.patch('telegram.ext.MessageHandler')
