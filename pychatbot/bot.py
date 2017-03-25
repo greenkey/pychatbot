@@ -15,12 +15,6 @@ class Bot(object):
             return f(self)
         return self.default_response(in_message)
 
-    def http_stop(self):
-        self.http_on = False
-
-        while self.http_thread.is_alive():
-            self.httpd.server_close()
-
     def telegram_serve(self, token):
         from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
