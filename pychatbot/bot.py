@@ -1,6 +1,3 @@
-import json
-
-
 class Bot(object):
     commands = []
     command_prepend = "/"
@@ -10,7 +7,8 @@ class Bot(object):
         pass
 
     def process(self, in_message):
-        if in_message.startswith(self.command_prepend) and in_message[1:] in self.commands:
+        if (in_message.startswith(self.command_prepend) and
+                in_message[1:] in self.commands):
             f = self.__getattribute__(in_message[1:])
             return f(self)
         return self.default_response(in_message)
@@ -28,7 +26,7 @@ class Bot(object):
             ep.stop()
 
 
-# decorator    
+# decorator
 class command():
     def __init__(self, f):
         Bot.commands.append(f.__name__)

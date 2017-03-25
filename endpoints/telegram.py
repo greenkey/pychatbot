@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import telegram
 
 
@@ -39,4 +40,3 @@ class TelegramEndpoint(object):
         command = update.message.text[1:]
         f = self._bot.__getattribute__(command)
         update.message.reply_text(f(self._bot))
-

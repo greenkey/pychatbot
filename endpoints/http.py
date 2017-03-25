@@ -1,5 +1,7 @@
 from threading import Thread
 from time import sleep
+from socket import error as socket_error
+
 
 try:
     from urllib.parse import parse_qs
@@ -37,20 +39,23 @@ class HttpEndpoint(object):
         self._bot = bot
 
     def serve_loop(self):
-        while self._http_on:
-            self._httpd.handle_request()
+        try:
+            while self._http_on:
+                self._httpd.handle_request()
+        except socket_error:
+            pass
 
     def run(self):
         self._http_on = True
         self._http_thread = Thread(target=self.serve_loop)
-        self._http_thread.daemon = True
         self._http_thread.start()
 
         while not self._http_thread.is_alive():
-            sleep(1)
+            sleep(0.5)
 
     def stop(self):
         self._http_on = False
 
         while self._http_thread.is_alive():
+            sleep(0.5)
             self._httpd.server_close()
