@@ -1,6 +1,7 @@
 from threading import Thread
 from time import sleep
 from socket import error as socket_error
+from http.client import HTTPConnection
 
 
 try:
@@ -28,7 +29,9 @@ class HttpEndpoint(object):
                 s.send_response(200)
                 s.end_headers()
                 output = {
-                    "out_message": self._bot.process("".join(params["in_message"]))
+                    "out_message": self._bot.process(
+                        "".join(params["in_message"])
+                    )
                 }
                 s.wfile.write(json.dumps(output).encode("UTF-8"))
 
@@ -56,6 +59,12 @@ class HttpEndpoint(object):
     def stop(self):
         self._http_on = False
 
+        conn = HTTPConnection(
+            self._httpd.server_name + ":" + str(self._httpd.server_port)
+        )
+        conn.request("GET", "/shutdown")
+        conn.close()
         while self._http_thread.is_alive():
             sleep(0.5)
             self._httpd.server_close()
+            self._httpd.socket.close()
