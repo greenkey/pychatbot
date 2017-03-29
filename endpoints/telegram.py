@@ -18,7 +18,7 @@ class TelegramEndpoint(object):
             )
         )
 
-        for command in self._bot.commands:
+        for command in self._bot.command_names:
             self._telegram.dispatcher.add_handler(
                 telegram.ext.CommandHandler(
                     command,
@@ -39,4 +39,4 @@ class TelegramEndpoint(object):
     def default_command_handler(self, bot, update):
         command = update.message.text[1:]
         f = self._bot.__getattribute__(command)
-        update.message.reply_text(f(self._bot))
+        update.message.reply_text(f())

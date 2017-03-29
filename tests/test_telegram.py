@@ -104,9 +104,9 @@ def test_telegram_command(mocker):
     assert 'other' in commands_added
 
     commands_added['start'](bot, create_telegram_update('/start'))
-    telegram.Message.reply_text.assert_called_with(bot.start(bot))
+    telegram.Message.reply_text.assert_called_with(bot.start())
 
     commands_added['other'](bot, create_telegram_update('/other'))
-    telegram.Message.reply_text.assert_called_with(bot.other(bot))
+    telegram.Message.reply_text.assert_called_with(bot.other())
 
     bot.stop()
