@@ -52,11 +52,11 @@ Just define a method of your Bot class using the `command` decorator.
 >>> from pychatbot.bot import Bot, command
 >>> class MyBot(Bot):
 ...     @command
-...     def hello():
+...     def hello(self):
 ...             return "hello!"
 ... 
->>> b = MyBot()
->>> b.process("/hello") # the default command prepend is "/"
+>>> bot = MyBot()
+>>> bot.process("/hello") # the default command prepend is "/"
 'hello!'
 ```
 
@@ -72,8 +72,10 @@ The simplest interface we can give to our bot is the http one.
 ...     def default_response(self, in_message):
 ...             return in_message
 ... 
->>> b = MyBot()
->>> b.http_serve()
+>>> bot = MyBot()
+>>> ep = HttpEndpoint()
+>>> bot.add_endpoint(ep)
+>>> bot.run()
 ```
 
 Then you can send message to the bot using simple GET requests (default 
@@ -97,8 +99,12 @@ to your bot.
 ...     def default_response(self, in_message):
 ...             return in_message
 ... 
->>> b = MyBot()
->>> b.telegram_serve(token='123:ABC')
+>>> bot = MyBot()
+>>> ep = TelegramEndpoint(
+...     token='123:ABC'
+... )
+>>> bot.add_endpoint(ep)
+>>> bot.run()
 ```
 
 
