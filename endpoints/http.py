@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from threading import Thread
 from time import sleep
 from socket import error as socket_error
@@ -18,7 +19,7 @@ import json
 
 class HttpEndpoint(object):
     _PORT = 8000
-    _ADDRESS = ""
+    _ADDRESS = "localhost"
 
     def __init__(self):
         class Handler(BaseHTTPRequestHandler):
@@ -60,7 +61,7 @@ class HttpEndpoint(object):
         self._http_on = False
 
         conn = HTTPConnection(
-            self._httpd.server_name + ":" + str(self._httpd.server_port)
+            self._ADDRESS + ":" + str(self._PORT)
         )
         conn.request("GET", "/shutdown")
         conn.close()
