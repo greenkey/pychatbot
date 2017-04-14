@@ -6,3 +6,4 @@
 
 from .http import HttpEndpoint
 from .telegram import TelegramEndpoint
+from .twitter import TwitterEndpoint
