@@ -6,3 +6,4 @@ pychatbot/bot.py
 pychatbot/endpoints/__init__.py
 pychatbot/endpoints/http.py
 pychatbot/endpoints/telegram.py
+requirements.txt
