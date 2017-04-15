@@ -20,10 +20,10 @@ def test_twitter_interface(mocker):
 
     bot = MyBot()
 
-    consumer_key = 'vAhDKzPPw9hfKE96S1dsXh0Tk',
-    consumer_secret = 'gWmRZllJDrTVFOQrfeNLBe2A1mcMvE9bIw7XZNP3vk97U3rkrr',
-    access_token = '852396996136763392-lbCvcphsCKf46qm56RFs6kkwC3AL5N4',
-    access_token_secret = 'UrePBL8NXFpdoNSl4DBWxfvqvsYfQyafU0H3OgITOAkY9'
+    consumer_key = 'consumer_key',
+    consumer_secret = 'consumer_secret',
+    access_token = 'access_token',
+    access_token_secret = 'access_token_secret'
 
     endpoint = TwitterEndpoint(
         consumer_key=consumer_key,
