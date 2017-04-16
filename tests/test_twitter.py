@@ -229,8 +229,11 @@ def test_use_start_on_twitter_follow(mocker, create_bot):
     bot.endpoints[0].set_polling_frequency(0.1)
 
     follower = create_fake_user()
-    twitterAPI().GetFollowers.return_value = [follower]
+    twitterAPI().IncomingFriendship.return_value = [follower]
     wait_for(lambda: bot.start_called)
+    twitterAPI().CreateFriendship.assert_called_once_with(
+        user_id=follower.id
+    )
     twitterAPI().PostDirectMessage.assert_called_once_with(
         'Hello new friend!', user_id=follower.id
     )

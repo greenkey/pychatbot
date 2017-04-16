@@ -88,13 +88,13 @@ class TwitterEndpoint(object):
             for direct_message in dms:
                 self.process_new_direct_message(direct_message)
 
-            new_followers = self._api.GetFollowers()
+            new_followers = self._api.IncomingFriendship()
             for user in new_followers:
-                if not user.following:
-                    # TODO: follow
-                    start_response = self._bot.start()
-                    # TODO: make this call a method
-                    self._api.PostDirectMessage(start_response, user_id=user.id)
+                self._api.CreateFriendship(user_id=user.id)
+
+                start_response = self._bot.start()
+                # TODO: make this call a method
+                self._api.PostDirectMessage(start_response, user_id=user.id)
 
             # like an heartbeat, to let know that the polling is working
             # useful to `run` to know if the thread is really started
