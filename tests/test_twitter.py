@@ -2,18 +2,25 @@
 '''
 
 import pytest
-from time import time, sleep
 from twitter.models import DirectMessage
+
+from .conftest import wait_for
 
 from pychatbot.bot import Bot
 from pychatbot.endpoints import TwitterEndpoint
 
 
 class DirectMessageMocker:
+    """ Fixture to create fake DirectMessages
+    """
+
     def __init__(self):
         self.direct_messages_sent = []
 
     def add_direct_message(self, text):
+        """ Create a fake DirectMessage and adds it to `self.direct_messages`
+        """
+
         new_dm = DirectMessage().NewFromJsonDict({
             'id': len(self.direct_messages_sent) + 1,
             'text': text,
@@ -29,23 +36,19 @@ class DirectMessageMocker:
         return new_dm
 
     def get_message_list(self, since_id=-1):
+        """ Retrieve the list of DMs created with `add_direct_message`.
+            Use this as patch for the function retrieving DMs.
+        """
+
         return [dm for dm in self.direct_messages_sent if dm.id > since_id]
 
 
 @pytest.fixture()
 def direct_messages():
+    """ Fixture: returns `DirectMessageMocker`, all the logic is in the class
+        definition.
+    """
     return DirectMessageMocker()
-
-
-def wait_for(check_callback, polling_time=0.1, timeout=5):
-    start = time()
-    while time() - start < timeout:
-        if check_callback():
-            break
-        sleep(polling_time)
-    else:
-        assert False
-    assert True
 
 
 def test_twitter_interface(mocker):

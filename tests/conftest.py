@@ -4,6 +4,7 @@
 """
 
 import pytest
+from time import time, sleep
 
 
 @pytest.fixture
@@ -32,3 +33,19 @@ def create_bot():
     yield create
 
     fixture['bot'].stop()
+
+
+def wait_for(check_callback, polling_time=0.1, timeout=5):
+    """ Creates an infinite loop, exit from it when the `check_callback` returns
+        True.
+        `polling_time` (seconds) is the time to wait between each try
+        `timeout` (seconds) is the total time to wait before giving up
+    """
+    start = time()
+    while time() - start < timeout:
+        if check_callback():
+            break
+        sleep(polling_time)
+    else:
+        assert False
+    assert True
