@@ -2,7 +2,7 @@
 '''
 
 import pytest
-from twitter.models import DirectMessage
+from twitter.models import DirectMessage, User
 
 from .conftest import wait_for
 
@@ -49,6 +49,16 @@ def direct_messages():
         definition.
     """
     return DirectMessageMocker()
+
+
+def create_fake_user():
+    new_user = User.NewFromJsonDict({
+        'id': 0,
+        'name': 'greenkey',
+        'screen_name': 'greenkey',
+        'following': False
+    })
+    return new_user
 
 
 def test_twitter_interface(mocker, create_bot):
@@ -169,7 +179,6 @@ def test_twitter_commands(mocker, direct_messages, create_bot):
 
     twitterAPI = mocker.patch('twitter.Api')
     twitterAPI().GetDirectMessages = direct_messages.get_message_list
-    message = direct_messages.add_direct_message('previous message')
 
     class MyBot(Bot):
         'Echo bot'
@@ -191,6 +200,39 @@ def test_twitter_commands(mocker, direct_messages, create_bot):
     wait_for(lambda: bot.start_called)
     twitterAPI().PostDirectMessage.assert_called_once_with(
         'Hello!', user_id=message.sender.id
+    )
+
+    bot.stop()
+
+
+def test_use_start_on_twitter_follow(mocker, create_bot):
+    ''' Twitter bot should auto-follow the followers and then use the start
+        command.
+    '''
+
+    twitterAPI = mocker.patch('twitter.Api')
+
+    class MyBot(Bot):
+        'Echo bot'
+
+        start_called = False
+
+        @command
+        def start(self):
+            self.start_called = True
+            return 'Hello new friend!'
+
+    bot = create_bot(MyBot(), TwitterEndpoint(
+        consumer_key='', consumer_secret='',
+        access_token='', access_token_secret=''
+    ))
+    bot.endpoints[0].set_polling_frequency(0.1)
+
+    follower = create_fake_user()
+    twitterAPI().GetFollowers.return_value = [follower]
+    wait_for(lambda: bot.start_called)
+    twitterAPI().PostDirectMessage.assert_called_once_with(
+        'Hello new friend!', user_id=follower.id
     )
 
     bot.stop()

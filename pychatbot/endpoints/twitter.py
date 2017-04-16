@@ -44,7 +44,7 @@ class TwitterEndpoint(object):
         # now the old answers, even the one already answered
         self._calculate_last_processed_dm()
 
-        self._polling_thread = Thread(target=self.polling_new_direct_messages)
+        self._polling_thread = Thread(target=self.polling_new_events)
 
     def set_polling_frequency(self, polling_frequency):
         """ Polling frequency setter """
@@ -73,8 +73,8 @@ class TwitterEndpoint(object):
         self._polling_should_run = False
         self._polling_thread.join()
 
-    def polling_new_direct_messages(self):
-        """ Strats an infinite loop to see if there are new DMs.
+    def polling_new_events(self):
+        """ Strats an infinite loop to see if there are new events.
 
             The loop ends when the `self._polling_should_run` will be false
             (set `True` by `self.run` and `False` by `self.stop`)
@@ -85,9 +85,16 @@ class TwitterEndpoint(object):
             dms = self._api.GetDirectMessages(
                 since_id=self._last_processed_dm
             )
-
             for direct_message in dms:
                 self.process_new_direct_message(direct_message)
+
+            new_followers = self._api.GetFollowers()
+            for user in new_followers:
+                if not user.following:
+                    # TODO: follow
+                    start_response = self._bot.start()
+                    # TODO: make this call a method
+                    self._api.PostDirectMessage(start_response, user_id=user.id)
 
             # like an heartbeat, to let know that the polling is working
             # useful to `run` to know if the thread is really started
