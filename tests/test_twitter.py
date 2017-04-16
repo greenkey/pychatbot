@@ -51,7 +51,7 @@ def direct_messages():
     return DirectMessageMocker()
 
 
-def test_twitter_interface(mocker):
+def test_twitter_interface(mocker, create_bot):
     ''' Test that the Twitter API is called when using the endpoint.
     '''
 
@@ -63,24 +63,18 @@ def test_twitter_interface(mocker):
         def default_response(self, in_message):
             return in_message.lower()
 
-    bot = MyBot()
-
     consumer_key = 'consumer_key',
     consumer_secret = 'consumer_secret',
     access_token = 'access_token',
     access_token_secret = 'access_token_secret'
 
-    endpoint = TwitterEndpoint(
-        consumer_key=consumer_key,
-        consumer_secret=consumer_secret,
-        access_token=access_token,
-        access_token_secret='access_token_secret'
-    )
-    endpoint.set_polling_frequency(0.1)
-    bot.add_endpoint(endpoint)
-    assert endpoint._bot == bot
+    bot = create_bot(MyBot(), TwitterEndpoint(
+        consumer_key=consumer_key, consumer_secret=consumer_secret,
+        access_token=access_token, access_token_secret=access_token_secret
+    ))
+    bot.endpoints[0].set_polling_frequency(0.1)
 
-    bot.run()
+    assert bot.endpoints[0]._bot == bot
 
     twitterAPI.assert_called_once_with(
         consumer_key=consumer_key,
@@ -89,10 +83,8 @@ def test_twitter_interface(mocker):
         access_token_secret=access_token_secret
     )
 
-    bot.stop()
 
-
-def test_twitter_default_response(mocker, direct_messages):
+def test_twitter_default_response(mocker, direct_messages, create_bot):
     ''' Test that the Twitter bot correctly reply with the default response.
     '''
 
@@ -111,16 +103,11 @@ def test_twitter_default_response(mocker, direct_messages):
                 for i, c in enumerate(in_message)
             ])
 
-    bot = MyBot()
-    endpoint = TwitterEndpoint(
-        consumer_key='consumer_key',
-        consumer_secret='consumer_secret',
-        access_token='access_token',
-        access_token_secret='access_token_secret'
-    )
-    endpoint.set_polling_frequency(0.1)
-    bot.add_endpoint(endpoint)
-    bot.run()
+    bot = create_bot(MyBot(), TwitterEndpoint(
+        consumer_key='', consumer_secret='',
+        access_token='', access_token_secret=''
+    ))
+    bot.endpoints[0].set_polling_frequency(0.1)
 
     message = direct_messages.add_direct_message('SuperCamelCase')
     wait_for(lambda: bot.last_in_message == 'SuperCamelCase')
@@ -137,7 +124,7 @@ def test_twitter_default_response(mocker, direct_messages):
     bot.stop()
 
 
-def test_dont_process_old_dms(mocker, direct_messages):
+def test_dont_process_old_dms(mocker, direct_messages, create_bot):
     ''' Test that the Twitter bot ignore the DMs sent before its start.
     '''
 
@@ -154,16 +141,11 @@ def test_dont_process_old_dms(mocker, direct_messages):
             self.last_in_message = in_message
             return in_message
 
-    bot = MyBot()
-    endpoint = TwitterEndpoint(
-        consumer_key='consumer_key',
-        consumer_secret='consumer_secret',
-        access_token='access_token',
-        access_token_secret='access_token_secret'
-    )
-    endpoint.set_polling_frequency(0.1)
-    bot.add_endpoint(endpoint)
-    bot.run()
+    bot = create_bot(MyBot(), TwitterEndpoint(
+        consumer_key='', consumer_secret='',
+        access_token='', access_token_secret=''
+    ))
+    bot.endpoints[0].set_polling_frequency(0.1)
 
     message = direct_messages.add_direct_message('this is the first message')
     wait_for(lambda: bot.last_in_message == 'this is the first message')
