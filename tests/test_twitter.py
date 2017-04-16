@@ -6,7 +6,7 @@ from twitter.models import DirectMessage
 
 from .conftest import wait_for
 
-from pychatbot.bot import Bot
+from pychatbot.bot import Bot, command
 from pychatbot.endpoints import TwitterEndpoint
 
 
@@ -158,6 +158,39 @@ def test_dont_process_old_dms(mocker, direct_messages, create_bot):
     assert twitterAPI().PostDirectMessage.call_count == 2
     twitterAPI().PostDirectMessage.assert_called_with(
         'this is the last message', user_id=message.sender.id
+    )
+
+    bot.stop()
+
+
+def test_twitter_commands(mocker, direct_messages, create_bot):
+    ''' Test that the Twitter bot handles commands.
+    '''
+
+    twitterAPI = mocker.patch('twitter.Api')
+    twitterAPI().GetDirectMessages = direct_messages.get_message_list
+    message = direct_messages.add_direct_message('previous message')
+
+    class MyBot(Bot):
+        'Echo bot'
+
+        start_called = False
+
+        @command
+        def start(self):
+            self.start_called = True
+            return 'Hello!'
+
+    bot = create_bot(MyBot(), TwitterEndpoint(
+        consumer_key='', consumer_secret='',
+        access_token='', access_token_secret=''
+    ))
+    bot.endpoints[0].set_polling_frequency(0.1)
+
+    message = direct_messages.add_direct_message('/start')
+    wait_for(lambda: bot.start_called)
+    twitterAPI().PostDirectMessage.assert_called_once_with(
+        'Hello!', user_id=message.sender.id
     )
 
     bot.stop()
