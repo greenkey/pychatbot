@@ -50,9 +50,12 @@ def test_twitter_interface(mocker):
         consumer_key=consumer_key,
         consumer_secret=consumer_secret,
         access_token=access_token,
-        access_token_secret=access_token_secret
+        access_token_secret=access_token_secret,
+        polling_frequency=0.1
     )
     bot.add_endpoint(endpoint)
+    assert endpoint._bot == bot
+
     bot.run()
 
     twitterAPI.assert_called_once_with(
@@ -88,7 +91,8 @@ def test_twitter_default_response(mocker):
         consumer_key='consumer_key',
         consumer_secret='consumer_secret',
         access_token='access_token',
-        access_token_secret='access_token_secret'
+        access_token_secret='access_token_secret',
+        polling_frequency=0.1
     )
     bot.add_endpoint(endpoint)
     bot.run()
