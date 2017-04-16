@@ -28,8 +28,12 @@ class TwitterEndpoint(object):
     """
 
     def __init__(self, consumer_key, consumer_secret,
-                 access_token, access_token_secret,
-                 polling_frequency=3):
+                 access_token, access_token_secret,):
+        self._bot = None
+        self._last_processed_dm = 0
+        self._polling_should_run = False
+        self._polling_is_running = False
+        self._polling_frequency = 3
 
         self._api = twitter.Api(consumer_key=consumer_key,
                                 consumer_secret=consumer_secret,
@@ -41,7 +45,9 @@ class TwitterEndpoint(object):
         self._calculate_last_processed_dm()
 
         self._polling_thread = Thread(target=self.polling_new_direct_messages)
-        self._polling_is_running = False
+
+    def set_polling_frequency(self, polling_frequency):
+        """ Polling frequency setter """
         self._polling_frequency = polling_frequency
 
     def set_bot(self, bot):
@@ -103,7 +109,6 @@ class TwitterEndpoint(object):
             bot startup or the bot can miss some DMs.
         """
 
-        self._last_processed_dm = 0
         for direct_message in self._api.GetDirectMessages():
             self._last_processed_dm = max(
                 self._last_processed_dm,
