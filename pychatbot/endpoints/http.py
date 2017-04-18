@@ -61,7 +61,7 @@ class _HttpHandler(BaseHTTPRequestHandler, object):
                 self.send_response(200)
                 self.end_headers()
                 output = f.read()
-            self.wfile.write(output)
+            self.wfile.write(output.encode("UTF-8"))
 
     def log_message(self, format_, *args):
         """ Redefinition of the `log_message` method to use `logging` library.
