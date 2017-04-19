@@ -2,7 +2,8 @@
 '''
 
 import pytest
-from twitter.models import DirectMessage, User
+import json
+from tweepy.models import DirectMessage, User
 
 from .conftest import wait_for
 
@@ -21,7 +22,7 @@ class DirectMessageMocker:
         """ Create a fake DirectMessage and adds it to `self.direct_messages`
         """
 
-        new_dm = DirectMessage().NewFromJsonDict({
+        new_dm = DirectMessage().parse(api=None, json={
             'id': len(self.direct_messages_sent) + 1,
             'text': text,
             'sender': {
@@ -65,7 +66,8 @@ def test_twitter_interface(mocker, create_bot):
     ''' Test that the Twitter API is called when using the endpoint.
     '''
 
-    twitterAPI = mocker.patch('twitter.Api')
+    mOAuthHandler = mocker.patch('tweepy.OAuthHandler')
+    mAPI = mocker.patch('tweepy.API')
 
     class MyBot(Bot):
         'Lowering bot'
@@ -78,28 +80,28 @@ def test_twitter_interface(mocker, create_bot):
     access_token = 'access_token',
     access_token_secret = 'access_token_secret'
 
-    bot = create_bot(MyBot(), TwitterEndpoint(
+    tep = TwitterEndpoint(
         consumer_key=consumer_key, consumer_secret=consumer_secret,
         access_token=access_token, access_token_secret=access_token_secret
-    ))
-    bot.endpoints[0].set_polling_frequency(0.1)
+    )
+    tep.set_polling_frequency(0.1)
+    bot = create_bot(MyBot(), tep)
 
     assert bot.endpoints[0]._bot == bot
 
-    twitterAPI.assert_called_once_with(
-        consumer_key=consumer_key,
-        consumer_secret=consumer_secret,
-        access_token_key=access_token,
-        access_token_secret=access_token_secret
+    mOAuthHandler.assert_called_once_with(consumer_key, consumer_secret)
+    mOAuthHandler().set_access_token.assert_called_once_with(
+        access_token, access_token_secret
     )
+    mAPI.assert_called_once_with(mOAuthHandler())
 
 
 def test_twitter_default_response(mocker, direct_messages, create_bot):
     ''' Test that the Twitter bot correctly reply with the default response.
     '''
 
-    twitterAPI = mocker.patch('twitter.Api')
-    twitterAPI().GetDirectMessages = direct_messages.get_message_list
+    mAPI = mocker.patch('tweepy.API')
+    mAPI().direct_messages = direct_messages.get_message_list
 
     class MyBot(Bot):
         'Upp&Down bot'
@@ -113,33 +115,32 @@ def test_twitter_default_response(mocker, direct_messages, create_bot):
                 for i, c in enumerate(in_message)
             ])
 
-    bot = create_bot(MyBot(), TwitterEndpoint(
+    tep = TwitterEndpoint(
         consumer_key='', consumer_secret='',
         access_token='', access_token_secret=''
-    ))
-    bot.endpoints[0].set_polling_frequency(0.1)
+    )
+    tep.set_polling_frequency(0.1)
+    bot = create_bot(MyBot(), tep)
 
     message = direct_messages.add_direct_message('SuperCamelCase')
     wait_for(lambda: bot.last_in_message == 'SuperCamelCase')
-    twitterAPI().PostDirectMessage.assert_called_with(
+    mAPI().send_direct_message.assert_called_with(
         'sUpErCaMeLcAsE', user_id=message.sender.id
     )
 
     message = direct_messages.add_direct_message('plain boring text')
     wait_for(lambda: bot.last_in_message == 'plain boring text')
-    twitterAPI().PostDirectMessage.assert_called_with(
+    mAPI().send_direct_message.assert_called_with(
         'pLaIn bOrInG TeXt', user_id=message.sender.id
     )
-
-    bot.stop()
 
 
 def test_dont_process_old_dms(mocker, direct_messages, create_bot):
     ''' Test that the Twitter bot ignore the DMs sent before its start.
     '''
 
-    twitterAPI = mocker.patch('twitter.Api')
-    twitterAPI().GetDirectMessages = direct_messages.get_message_list
+    mAPI = mocker.patch('tweepy.API')
+    mAPI().direct_messages = direct_messages.get_message_list
     message = direct_messages.add_direct_message('previous message')
 
     class MyBot(Bot):
@@ -151,34 +152,33 @@ def test_dont_process_old_dms(mocker, direct_messages, create_bot):
             self.last_in_message = in_message
             return in_message
 
-    bot = create_bot(MyBot(), TwitterEndpoint(
+    tep = TwitterEndpoint(
         consumer_key='', consumer_secret='',
         access_token='', access_token_secret=''
-    ))
-    bot.endpoints[0].set_polling_frequency(0.1)
+    )
+    tep.set_polling_frequency(0.1)
+    bot = create_bot(MyBot(), tep)
 
     message = direct_messages.add_direct_message('this is the first message')
     wait_for(lambda: bot.last_in_message == 'this is the first message')
-    twitterAPI().PostDirectMessage.assert_called_once_with(
+    mAPI().send_direct_message.assert_called_once_with(
         'this is the first message', user_id=message.sender.id
     )
 
     message = direct_messages.add_direct_message('this is the last message')
     wait_for(lambda: bot.last_in_message == 'this is the last message')
-    assert twitterAPI().PostDirectMessage.call_count == 2
-    twitterAPI().PostDirectMessage.assert_called_with(
+    assert mAPI().send_direct_message.call_count == 2
+    mAPI().send_direct_message.assert_called_with(
         'this is the last message', user_id=message.sender.id
     )
-
-    bot.stop()
 
 
 def test_twitter_commands(mocker, direct_messages, create_bot):
     ''' Test that the Twitter bot handles commands.
     '''
 
-    twitterAPI = mocker.patch('twitter.Api')
-    twitterAPI().GetDirectMessages = direct_messages.get_message_list
+    mAPI = mocker.patch('tweepy.API')
+    mAPI().direct_messages = direct_messages.get_message_list
 
     class MyBot(Bot):
         'Echo bot'
@@ -190,19 +190,18 @@ def test_twitter_commands(mocker, direct_messages, create_bot):
             self.start_called = True
             return 'Hello!'
 
-    bot = create_bot(MyBot(), TwitterEndpoint(
+    tep = TwitterEndpoint(
         consumer_key='', consumer_secret='',
         access_token='', access_token_secret=''
-    ))
-    bot.endpoints[0].set_polling_frequency(0.1)
+    )
+    tep.set_polling_frequency(0.1)
+    bot = create_bot(MyBot(), tep)
 
     message = direct_messages.add_direct_message('/start')
     wait_for(lambda: bot.start_called)
-    twitterAPI().PostDirectMessage.assert_called_once_with(
+    mAPI().send_direct_message.assert_called_once_with(
         'Hello!', user_id=message.sender.id
     )
-
-    bot.stop()
 
 
 def test_use_start_on_twitter_follow(mocker, create_bot):
@@ -210,7 +209,7 @@ def test_use_start_on_twitter_follow(mocker, create_bot):
         command.
     '''
 
-    twitterAPI = mocker.patch('twitter.Api')
+    mAPI = mocker.patch('tweepy.API')
 
     class MyBot(Bot):
         'Echo bot'
@@ -222,20 +221,19 @@ def test_use_start_on_twitter_follow(mocker, create_bot):
             self.start_called = True
             return 'Hello new friend!'
 
-    bot = create_bot(MyBot(), TwitterEndpoint(
+    tep = TwitterEndpoint(
         consumer_key='', consumer_secret='',
         access_token='', access_token_secret=''
-    ))
-    bot.endpoints[0].set_polling_frequency(0.1)
+    )
+    tep.set_polling_frequency(0.1)
+    bot = create_bot(MyBot(), tep)
 
-    follower = create_fake_user()
-    twitterAPI().IncomingFriendship.return_value = [follower]
+    follower_id = 42
+    mAPI().followers_ids.return_value = [follower_id]
     wait_for(lambda: bot.start_called)
-    twitterAPI().CreateFriendship.assert_called_once_with(
-        user_id=follower.id
+    mAPI().create_friendship.assert_called_once_with(
+        user_id=follower_id
     )
-    twitterAPI().PostDirectMessage.assert_called_once_with(
-        'Hello new friend!', user_id=follower.id
+    mAPI().send_direct_message.assert_called_once_with(
+        'Hello new friend!', user_id=follower_id
     )
-
-    bot.stop()

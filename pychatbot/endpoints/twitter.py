@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from threading import Thread
 from time import sleep
 
-import twitter
+import tweepy
 
 
 class TwitterEndpoint(object):
@@ -33,12 +33,12 @@ class TwitterEndpoint(object):
         self._last_processed_dm = 0
         self._polling_should_run = False
         self._polling_is_running = False
-        self._polling_frequency = 3
+        self._polling_frequency = 5
 
-        self._api = twitter.Api(consumer_key=consumer_key,
-                                consumer_secret=consumer_secret,
-                                access_token_key=access_token,
-                                access_token_secret=access_token_secret)
+        self._auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+        self._auth.set_access_token(access_token, access_token_secret)
+
+        self._api = tweepy.API(self._auth)
 
         # ignore all the DMs sent before the start, otherwise the bot will send
         # now the old answers, even the one already answered
@@ -81,20 +81,22 @@ class TwitterEndpoint(object):
         """
 
         while self._polling_should_run:
-
-            dms = self._api.GetDirectMessages(
+            dms = self._api.direct_messages(
                 since_id=self._last_processed_dm
             )
             for direct_message in dms:
                 self.process_new_direct_message(direct_message)
 
-            new_followers = self._api.IncomingFriendship()
-            for user in new_followers:
-                self._api.CreateFriendship(user_id=user.id)
+            followers = self._api.followers_ids()
+            friends = self._api.friends_ids()
+            for userid in [u for u in followers if u not in friends]:
+                self._api.create_friendship(user_id=userid)
 
-                start_response = self._bot.start()
                 # TODO: make this call a method
-                self._api.PostDirectMessage(start_response, user_id=user.id)
+                self._api.send_direct_message(
+                    self._bot.start(),
+                    user_id=userid
+                )
 
             # like an heartbeat, to let know that the polling is working
             # useful to `run` to know if the thread is really started
@@ -105,10 +107,9 @@ class TwitterEndpoint(object):
     def process_new_direct_message(self, direct_message):
         """ Method called for each new DMs arrived.
         """
-
         response = self._bot.process(in_message=direct_message.text)
 
-        self._api.PostDirectMessage(response, user_id=direct_message.sender.id)
+        self._api.send_direct_message(response, user_id=direct_message.sender.id)
         self._last_processed_dm = direct_message.id
 
     def _calculate_last_processed_dm(self):
@@ -116,7 +117,7 @@ class TwitterEndpoint(object):
             bot startup or the bot can miss some DMs.
         """
 
-        for direct_message in self._api.GetDirectMessages():
+        for direct_message in self._api.direct_messages():
             self._last_processed_dm = max(
                 self._last_processed_dm,
                 direct_message.id
