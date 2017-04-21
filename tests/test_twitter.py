@@ -24,11 +24,11 @@ class TweepyMocker:
         self.tweepy_endpoint = tweepy_endpoint
 
     def set_API(self, tweepy_api):
-        self.tweepy_api = tweepy_api
+        tweepy_api().followers_ids = self.get_followers_ids
+        tweepy_api().friends_ids = self.get_friends_ids
+        tweepy_api().create_friendship.side_effect = self.create_friendship
 
-        self.tweepy_api().followers_ids = self.get_followers_ids
-        self.tweepy_api().friends_ids = self.get_friends_ids
-        self.tweepy_api().create_friendship.side_effect = self.create_friendship
+        self.tweepy_api = tweepy_api
 
     def get_followers_ids(self):
         return [f.id for f in self.followers]

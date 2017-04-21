@@ -13,16 +13,19 @@ import tweepy
 
 
 class MyStreamListener(tweepy.StreamListener):
+    """ This class will listen for `on_data` events on the twitter stream and
+        then it will dispatch them to the endpoint.the
+    """
 
     def set_endpoint(self, endpoint):
         """ Sets the endpoint instance to use when an event happens """
         self.endpoint = endpoint
 
-    def on_data(self, data_str):
+    def on_data(self, raw_data):
         """ Called when data arrives this method dispatch the event
             to the right endpoint's method.
         """
-        data = json.loads(data_str)
+        data = json.loads(raw_data)
 
         if 'direct_message' in data:
             self.endpoint.process_new_direct_message(data['direct_message'])
@@ -65,6 +68,8 @@ class TwitterEndpoint(object):
 
         self._polling_thread = Thread(target=self.polling_new_events)
 
+        self._stream = None
+
     def set_bot(self, bot):
         """ Sets the main bot, the bot must be an instance of
             `pychatbot.bot.Bot`.
@@ -98,11 +103,11 @@ class TwitterEndpoint(object):
             (set `True` by `self.run` and `False` by `self.stop`)
         """
 
-        myStreamListener = MyStreamListener()
-        myStreamListener.set_endpoint(self)
+        stream_listener = MyStreamListener()
+        stream_listener.set_endpoint(self)
         self._stream = tweepy.Stream(
             auth=self._api.auth,
-            listener=myStreamListener
+            listener=stream_listener
         )
 
         self._stream.userstream(async=True)
@@ -122,11 +127,14 @@ class TwitterEndpoint(object):
         self._last_processed_dm = direct_message['id']
 
     def process_new_follower(self, user):
+        """ Follow the user if it isn't already followed.
+            This method should be called at startup for all the followers and
+            when a new user follow us.
+        """
         already_friends = self._api.friends_ids()
         if user['id'] not in already_friends:
             self._api.create_friendship(user_id=user['id'])
 
-            # TODO: make this call a method
             self._api.send_direct_message(
                 text=self._bot.start(),
                 user_id=user['id']
@@ -144,6 +152,8 @@ class TwitterEndpoint(object):
             )
 
     def check_new_followers(self):
+        """ For each follower (not friend) process it (follow and start bot).
+        """
         [
             self.process_new_follower({'id': uid})
             for uid in self._api.followers_ids()
