@@ -1,1 +1,10 @@
+include *.md
+include *.py
+include *.txt
+include LICENSE
+include MANIFEST
+include Makefile
+include pytest.ini
+include tox.ini
 include requirements.txt
+recursive-include tests *.py

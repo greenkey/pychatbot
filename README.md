@@ -1,6 +1,7 @@
 # pychatbot
 
-[![Build Status](https://travis-ci.org/greenkey/pychatbot.svg?branch=develop)](https://travis-ci.org/greenkey/pychatbot)
+[![Build Status](https://travis-ci.org/greenkey/pychatbot.svg?branch=master)](https://travis-ci.org/greenkey/pychatbot)
+
 
 `pychatbot` is a library you can use to create your own chat bots in seconds.
 
@@ -13,6 +14,8 @@ You can install it downloading this repository in your project or using pip:
 ```shell
 $ pip install git+https://github.com/greenkey/pychatbot.git
 ```
+
+A package in the PyPI repository will be available soon.
 
 ## Usage
 

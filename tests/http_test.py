@@ -111,3 +111,18 @@ def test_uses_a_custom_port():
     assert resp.status_code == 200
 
     bot.stop()
+
+
+def test_expose_html_page(create_bot):
+    """ Starting the bot, an HTML page is available in the root of the webserver
+        showing a form to chat with the bot.
+    """
+
+    endpoint = HttpEndpoint(port=randint(8000, 9000))
+    create_bot(Bot(), endpoint)
+
+    address = "http://%s:%d/" % (endpoint.host, endpoint.port)
+
+    response = requests.get(address)
+
+    assert 'html' in response.text.lower()

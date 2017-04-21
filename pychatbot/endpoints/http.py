@@ -7,6 +7,7 @@ from time import sleep
 from socket import error as socket_error
 from http.client import HTTPConnection
 import logging
+import os
 
 try:  # specific imports for Python 3
     from urllib.parse import parse_qs
@@ -38,16 +39,29 @@ class _HttpHandler(BaseHTTPRequestHandler, object):
 
                 `{"out_message": "hello"}`
         """
-        function, params = self.path.split("?")
-        function, params = function[1:], parse_qs(params)
-        self.send_response(200)
-        self.end_headers()
-        output = {
-            "out_message": self.server.bot.process(
-                "".join(params["in_message"])
+        try:
+            function, params = self.path.split("?")
+            function, params = function[1:], parse_qs(params)
+            self.send_response(200)
+            self.end_headers()
+            output = {
+                "out_message": self.server.bot.process(
+                    "".join(params["in_message"])
+                )
+            }
+            self.wfile.write(json.dumps(output).encode("UTF-8"))
+        except ValueError:
+            # if no command is specified, serve the default html
+            filename = os.path.join(
+                os.path.dirname(__file__),
+                'http',
+                'index.html'
             )
-        }
-        self.wfile.write(json.dumps(output).encode("UTF-8"))
+            with open(filename, 'r') as f:
+                self.send_response(200)
+                self.end_headers()
+                output = f.read()
+            self.wfile.write(output.encode("UTF-8"))
 
     def log_message(self, format_, *args):
         """ Redefinition of the `log_message` method to use `logging` library.
