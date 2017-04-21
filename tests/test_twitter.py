@@ -3,6 +3,7 @@
 
 import pytest
 import json
+from tweepy.models import ModelFactory
 
 from .conftest import wait_for
 
@@ -16,11 +17,41 @@ class TweepyMocker:
 
     def __init__(self):
         self.tweepy_endpoint = None
+        self.tweepy_api = None
         self.direct_messages_created = []
         self.followers = []
+        self.friends = []
 
     def set_endpoint(self, tweepy_endpoint):
         self.tweepy_endpoint = tweepy_endpoint
+
+    def set_API(self, tweepy_api):
+        self.tweepy_api = tweepy_api
+
+        self.tweepy_api().followers_ids = self.get_followers_ids
+        self.tweepy_api().friends_ids = self.get_friends_ids
+        self.tweepy_api().create_friendship.side_effect = self.create_friendship
+
+    def get_followers_ids(self):
+        return [f.id for f in self.followers]
+
+    def get_friends_ids(self):
+        return [f.id for f in self.friends]
+
+    def create_friendship(self, user_id):
+        if user_id not in self.get_friends_ids():
+            for user in self.followers:
+                if user.id == user_id:
+                    self.followers.remove(user)
+                    new_user = user
+                    break
+            else:
+                new_user = ModelFactory.user.parse(
+                    self.tweepy_api,
+                    {'id': user_id, 'screen_name': 'user #%d' % user_id}
+                )
+
+            self.friends.append(new_user)
 
     def add_to_stream(self, data):
         try:
@@ -71,7 +102,12 @@ class TweepyMocker:
             }
         }
 
-        self.followers.append(data['source'])
+        self.followers.append(
+            ModelFactory.user.parse(
+                self.tweepy_api,
+                data['source']
+            )
+        )
 
         self.add_to_stream(data)
 
@@ -118,7 +154,7 @@ def test_twitter_interface(mocker, create_bot):
         consumer_key=consumer_key, consumer_secret=consumer_secret,
         access_token=access_token, access_token_secret=access_token_secret
     )
-    
+
     bot = create_bot(MyBot(), tep)
 
     assert bot.endpoints[0]._bot == bot
@@ -158,12 +194,12 @@ def test_twitter_default_response(mocker, twit_mock, create_bot):
 
     message = twit_mock.add_direct_message('SuperCamelCase')
     mAPI().send_direct_message.assert_called_with(
-        'sUpErCaMeLcAsE', user_id=message['sender']['id']
+        text='sUpErCaMeLcAsE', user_id=message['sender']['id']
     )
 
     message = twit_mock.add_direct_message('plain boring text')
     mAPI().send_direct_message.assert_called_with(
-        'pLaIn bOrInG TeXt', user_id=message['sender']['id']
+        text='pLaIn bOrInG TeXt', user_id=message['sender']['id']
     )
 
 
@@ -194,13 +230,13 @@ def test_dont_process_old_dms(mocker, twit_mock, create_bot):
 
     message = twit_mock.add_direct_message('this is the first message')
     mAPI().send_direct_message.assert_called_once_with(
-        'this is the first message', user_id=message['sender']['id']
+        text='this is the first message', user_id=message['sender']['id']
     )
 
     message = twit_mock.add_direct_message('this is the last message')
     assert mAPI().send_direct_message.call_count == 2
     mAPI().send_direct_message.assert_called_with(
-        'this is the last message', user_id=message['sender']['id']
+        text='this is the last message', user_id=message['sender']['id']
     )
 
 
@@ -229,7 +265,7 @@ def test_twitter_commands(mocker, twit_mock, create_bot):
 
     message = twit_mock.add_direct_message('/start')
     mAPI().send_direct_message.assert_called_once_with(
-        'Hello!', user_id=message['sender']['id']
+        text='Hello!', user_id=message['sender']['id']
     )
 
 
@@ -239,6 +275,7 @@ def test_use_start_on_twitter_follow(mocker, twit_mock, create_bot):
     '''
 
     mAPI = mocker.patch('tweepy.API')
+    twit_mock.set_API(mAPI)
 
     class MyBot(Bot):
         'Echo bot'
@@ -263,5 +300,67 @@ def test_use_start_on_twitter_follow(mocker, twit_mock, create_bot):
         user_id=user['id']
     )
     mAPI().send_direct_message.assert_called_once_with(
-        'Hello new friend!', user_id=user['id']
+        text='Hello new friend!', user_id=user['id']
     )
+
+
+def test_follow_new_followers_at_boot(mocker, twit_mock, create_bot):
+    ''' Twitter bot should check the follower at start and follow the new ones.
+    '''
+
+    mAPI = mocker.patch('tweepy.API')
+    twit_mock.set_API(mAPI)
+
+    class MyBot(Bot):
+        'Echo bot'
+
+        start_called = False
+
+        @command
+        def start(self):
+            self.start_called = True
+            return 'Hello new friend!'
+
+    tep = TwitterEndpoint(
+        consumer_key='', consumer_secret='',
+        access_token='', access_token_secret=''
+    )
+    twit_mock.set_endpoint(tep)
+    user = twit_mock.add_follower('new_friend')
+
+    create_bot(MyBot(), tep)
+
+    mAPI().create_friendship.assert_called_once_with(
+        user_id=user['id']
+    )
+    mAPI().send_direct_message.assert_called_once_with(
+        text='Hello new friend!', user_id=user['id']
+    )
+
+
+def test_dont_send_message_if_already_following(mocker, twit_mock, create_bot):
+    ''' Twitter bot should check the follower at start and follow the new ones.
+    '''
+
+    mAPI = mocker.patch('tweepy.API')
+    twit_mock.set_API(mAPI)
+
+    class MyBot(Bot):
+        'Echo bot'
+
+        @command
+        def start(self):
+            return 'Hello new friend!'
+
+    tep = TwitterEndpoint(
+        consumer_key='', consumer_secret='',
+        access_token='', access_token_secret=''
+    )
+    twit_mock.set_endpoint(tep)
+    user = twit_mock.add_follower('new_friend')
+    twit_mock.create_friendship(user['id'])
+
+    create_bot(MyBot(), tep)
+
+    mAPI().create_friendship.assert_not_called()
+    mAPI().send_direct_message.assert_not_called()

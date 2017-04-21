@@ -76,6 +76,8 @@ class TwitterEndpoint(object):
     def run(self):
         """Starts the polling for new DMs."""
 
+        self.check_new_followers()
+
         self._polling_should_run = True
         self._polling_thread.start()
 
@@ -113,7 +115,7 @@ class TwitterEndpoint(object):
         response = self._bot.process(in_message=direct_message['text'])
 
         self._api.send_direct_message(
-            response,
+            text=response,
             user_id=direct_message['sender']['id']
         )
 
@@ -126,7 +128,7 @@ class TwitterEndpoint(object):
 
             # TODO: make this call a method
             self._api.send_direct_message(
-                self._bot.start(),
+                text=self._bot.start(),
                 user_id=user['id']
             )
 
@@ -140,3 +142,9 @@ class TwitterEndpoint(object):
                 self._last_processed_dm,
                 direct_message.id
             )
+
+    def check_new_followers(self):
+        [
+            self.process_new_follower({'id': uid})
+            for uid in self._api.followers_ids()
+        ]
