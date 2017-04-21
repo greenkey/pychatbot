@@ -7,8 +7,28 @@
 from __future__ import absolute_import
 from threading import Thread
 from time import sleep
+import json
 
 import tweepy
+
+
+class MyStreamListener(tweepy.StreamListener):
+
+    def set_endpoint(self, endpoint):
+        """ Sets the endpoint instance to use when an event happens """
+        self.endpoint = endpoint
+
+    def on_data(self, data_str):
+        """ Called when data arrives this method dispatch the event
+            to the right endpoint's method.
+        """
+        data = json.loads(data_str)
+
+        if 'direct_message' in data:
+            self.endpoint.process_new_direct_message(data['direct_message'])
+
+        elif data.get('event', '') == 'follow':
+            self.endpoint.process_new_follower(data['source'])
 
 
 class TwitterEndpoint(object):
@@ -33,7 +53,6 @@ class TwitterEndpoint(object):
         self._last_processed_dm = 0
         self._polling_should_run = False
         self._polling_is_running = False
-        self._polling_frequency = 5
 
         self._auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
         self._auth.set_access_token(access_token, access_token_secret)
@@ -45,10 +64,6 @@ class TwitterEndpoint(object):
         self._calculate_last_processed_dm()
 
         self._polling_thread = Thread(target=self.polling_new_events)
-
-    def set_polling_frequency(self, polling_frequency):
-        """ Polling frequency setter """
-        self._polling_frequency = polling_frequency
 
     def set_bot(self, bot):
         """ Sets the main bot, the bot must be an instance of
@@ -71,6 +86,7 @@ class TwitterEndpoint(object):
         """Make the polling for new DMs stop."""
 
         self._polling_should_run = False
+        self._stream.disconnect()
         self._polling_thread.join()
 
     def polling_new_events(self):
@@ -80,37 +96,39 @@ class TwitterEndpoint(object):
             (set `True` by `self.run` and `False` by `self.stop`)
         """
 
-        while self._polling_should_run:
-            dms = self._api.direct_messages(
-                since_id=self._last_processed_dm
-            )
-            for direct_message in dms:
-                self.process_new_direct_message(direct_message)
+        myStreamListener = MyStreamListener()
+        myStreamListener.set_endpoint(self)
+        self._stream = tweepy.Stream(
+            auth=self._api.auth,
+            listener=myStreamListener
+        )
 
-            followers = self._api.followers_ids()
-            friends = self._api.friends_ids()
-            for userid in [u for u in followers if u not in friends]:
-                self._api.create_friendship(user_id=userid)
+        self._stream.userstream(async=True)
 
-                # TODO: make this call a method
-                self._api.send_direct_message(
-                    self._bot.start(),
-                    user_id=userid
-                )
-
-            # like an heartbeat, to let know that the polling is working
-            # useful to `run` to know if the thread is really started
-            self._polling_is_running = True
-
-            sleep(self._polling_frequency)
+        self._polling_is_running = True
 
     def process_new_direct_message(self, direct_message):
         """ Method called for each new DMs arrived.
         """
-        response = self._bot.process(in_message=direct_message.text)
+        response = self._bot.process(in_message=direct_message['text'])
 
-        self._api.send_direct_message(response, user_id=direct_message.sender.id)
-        self._last_processed_dm = direct_message.id
+        self._api.send_direct_message(
+            response,
+            user_id=direct_message['sender']['id']
+        )
+
+        self._last_processed_dm = direct_message['id']
+
+    def process_new_follower(self, user):
+        already_friends = self._api.friends_ids()
+        if user['id'] not in already_friends:
+            self._api.create_friendship(user_id=user['id'])
+
+            # TODO: make this call a method
+            self._api.send_direct_message(
+                self._bot.start(),
+                user_id=user['id']
+            )
 
     def _calculate_last_processed_dm(self):
         """ Get the last arrived DM. This method should be called just at
