@@ -5,8 +5,6 @@ import pytest
 import json
 from tweepy.models import ModelFactory
 
-from .conftest import wait_for
-
 from pychatbot.bot import Bot, command
 from pychatbot.endpoints import TwitterEndpoint
 
@@ -176,10 +174,7 @@ def test_twitter_default_response(mocker, twit_mock, create_bot):
     class MyBot(Bot):
         'Upp&Down bot'
 
-        last_in_message = ''
-
         def default_response(self, in_message):
-            self.last_in_message = in_message
             return ''.join([
                 c.upper() if i % 2 else c.lower()
                 for i, c in enumerate(in_message)
@@ -212,10 +207,7 @@ def test_dont_process_old_dms(mocker, twit_mock, create_bot):
     class MyBot(Bot):
         'Echo bot'
 
-        last_in_message = ''
-
         def default_response(self, in_message):
-            self.last_in_message = in_message
             return in_message
 
     tep = TwitterEndpoint(
@@ -249,11 +241,8 @@ def test_twitter_commands(mocker, twit_mock, create_bot):
     class MyBot(Bot):
         'Echo bot'
 
-        start_called = False
-
         @command
         def start(self):
-            self.start_called = True
             return 'Hello!'
 
     tep = TwitterEndpoint(
@@ -280,11 +269,8 @@ def test_use_start_on_twitter_follow(mocker, twit_mock, create_bot):
     class MyBot(Bot):
         'Echo bot'
 
-        start_called = False
-
         @command
         def start(self):
-            self.start_called = True
             return 'Hello new friend!'
 
     tep = TwitterEndpoint(
@@ -314,11 +300,8 @@ def test_follow_new_followers_at_boot(mocker, twit_mock, create_bot):
     class MyBot(Bot):
         'Echo bot'
 
-        start_called = False
-
         @command
         def start(self):
-            self.start_called = True
             return 'Hello new friend!'
 
     tep = TwitterEndpoint(
