@@ -5,7 +5,6 @@
 """
 
 from __future__ import absolute_import
-from threading import Thread
 from time import sleep
 import json
 
@@ -62,12 +61,6 @@ class TwitterEndpoint(object):
 
         self._api = tweepy.API(self._auth)
 
-        # ignore all the DMs sent before the start, otherwise the bot will send
-        # now the old answers, even the one already answered
-        self._calculate_last_processed_dm()
-
-        self._polling_thread = Thread(target=self.polling_new_events)
-
         self._stream = None
 
     def set_bot(self, bot):
@@ -84,19 +77,15 @@ class TwitterEndpoint(object):
         self.check_new_followers()
 
         self._polling_should_run = True
-        self._polling_thread.start()
-
-        while not self._polling_is_running:
-            sleep(0.5)
+        self.start_polling()
 
     def stop(self):
         """Make the polling for new DMs stop."""
 
         self._polling_should_run = False
         self._stream.disconnect()
-        self._polling_thread.join()
 
-    def polling_new_events(self):
+    def start_polling(self):
         """ Strats an infinite loop to see if there are new events.
 
             The loop ends when the `self._polling_should_run` will be false
@@ -138,17 +127,6 @@ class TwitterEndpoint(object):
             self._api.send_direct_message(
                 text=self._bot.start(),
                 user_id=user['id']
-            )
-
-    def _calculate_last_processed_dm(self):
-        """ Get the last arrived DM. This method should be called just at
-            bot startup or the bot can miss some DMs.
-        """
-
-        for direct_message in self._api.direct_messages():
-            self._last_processed_dm = max(
-                self._last_processed_dm,
-                direct_message.id
             )
 
     def check_new_followers(self):
