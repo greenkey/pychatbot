@@ -1,6 +1,10 @@
 eddie
 =========
 
+.. image:: https://badges.gitter.im/eddie-py/Lobby.svg
+   :alt: Join the chat at https://gitter.im/eddie-py/Lobby
+   :target: https://gitter.im/eddie-py/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+
 |Build Status|
 
 ``eddie`` is a library you can use to create your own chat bots in
